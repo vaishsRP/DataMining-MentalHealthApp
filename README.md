@@ -47,11 +47,4 @@ pip install -r requirements.txt
 2. Run the cells in order to execute the analysis or model training
 3. Review the visualizations and results
 
-## Results
-The project explores the relationship between smartphone usage patterns and mental health indicators through data mining and machine learning approaches.
 
-## License
-MIT License
-
-## Author
-Your Name
