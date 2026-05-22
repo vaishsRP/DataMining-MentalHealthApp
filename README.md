@@ -1,4 +1,4 @@
-# DataMining-MentalHealthApp
+# DataProcessing-MoodIndicators
 
 ## Project Overview
 This project combines data mining and machine learning techniques to analyze mental health data from smartphone usage patterns. It includes exploratory data analysis, machine learning models, and deep learning implementations to understand and predict mental health trends.
