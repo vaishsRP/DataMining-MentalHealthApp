@@ -1,50 +1,88 @@
-# DataProcessing-MoodIndicators
+# Predicting Next-Day Mood from Smartphone Sensing
 
-## Project Overview
-This project combines data mining and machine learning techniques to analyze mental health data from smartphone usage patterns. It includes exploratory data analysis, machine learning models, and deep learning implementations to understand and predict mental health trends.
+Data Mining Techniques, VU Amsterdam 2026 — group project by
+Priyanshi Dhillon, Shithik Shaji, and Vaishanavi Mehta.
 
-## Dataset
-- **dataset_mood_smartphone.csv** - Smartphone usage and mood data
-- **ML_Dataset.csv** - Processed dataset for machine learning models
-- **DL_Dataset.csv** - Processed dataset for deep learning models
-- **processed_data.csv** - Cleaned and processed data
+> **At a glance**
+> **Question:** can passive smartphone data — screen time, app usage,
+> activity, communication — predict tomorrow's mood in people with
+> depression, without asking them anything?
+> **Data:** ecological momentary assessment from 27 participants over
+> 31–69 days each: 1,268 daily records of passive sensor signals plus
+> self-reported mood, arousal, and valence.
+> **Finding:** only partially, and the honest details matter. Gradient
+> boosting (weighted F1 0.537) beat both a Random Forest baseline (0.495)
+> and a tuned two-layer LSTM (macro F1 0.49 vs 0.53). The strongest
+> predictors were *yesterday's mood and affect*, not app usage. And the
+> "medium mood" class was nearly unpredictable (F1 0.34) because it
+> occupies a band of 0.45 points on a 10-point scale.
+> **Why it matters:** mental-health apps are often pitched on the promise
+> of passive mood detection. On this dataset, passive signals alone carry
+> weak signal, which is consistent with published work (Asselbergs et
+> al.). A product that promises mood prediction from passive sensing
+> should be treated as making a strong claim that needs strong evidence.
 
-## Project Structure
+## What we did
 
-### Notebooks
-- **Task1A.ipynb** - Task 1A Analysis
-- **Task1B.ipynb** - Task 1B Analysis
-- **Task1C.ipynb** - Task 1C Analysis
-- **ML_Model_final.ipynb** - Final Machine Learning Model implementation
-- **dl_model_lstm_FINAL.ipynb** - Final Deep Learning LSTM Model
+The analysis follows CRISP-DM end to end. The parts we spent the most
+care on:
 
-## Models & Techniques
+**Cleaning that respects what missingness means.** In this dataset a
+missing app-usage value is not a data-collection failure — a zero-usage
+day simply leaves no record. So `appCat.*` columns were zero-filled
+rather than interpolated, while genuinely continuous signals got
+time-series-appropriate imputation. Long gaps (>4 days) were treated as
+breaks rather than bridged, and one physically impossible value (a
+negative app duration) was NaN-ed rather than the whole row dropped.
 
-### Machine Learning
-Implementation of traditional ML algorithms for mental health prediction using smartphone data.
+**Skew handling per user, not globally.** Screen time was winsorized at
+each participant's own 95th percentile, and the heavy-tailed app-usage
+columns were log1p-transformed, so one heavy user's tail doesn't define
+"extreme" for everyone else.
 
-### Deep Learning
-LSTM (Long Short-Term Memory) neural network for sequential pattern analysis and mental health trend prediction.
+**Leak-proof evaluation.** Splits are chronological *within each
+participant* (final 20% as test), class thresholds for mood binning were
+computed on the training set only, and features are lags, rolling
+windows, and trends — never same-day peeks at the target.
 
-## Dependencies
-- Python 3.x
-- pandas
-- numpy
-- scikit-learn
-- TensorFlow/Keras
-- matplotlib
-- seaborn
+**Two modelling philosophies, compared honestly.** A non-temporal
+XGBoost on windowed features versus a two-layer LSTM over 5-day
+sequences, both grid-searched. The LSTM did not win. Short-term affect
+lags carry most of the usable signal, and at 1,133 training instances a
+sequence model has little room to show what it can do.
 
-## Installation
+## Results
+
+| Model | Weighted F1 | Macro F1 | Accuracy |
+|---|---|---|---|
+| Random Forest (top-10 features) | 0.495 | 0.485 | 0.502 |
+| **XGBoost (all 24 features)** | **0.537** | **0.527** | **0.550** |
+| LSTM (5-day windows) | — | 0.49 | — |
+
+Per class (XGBoost): Low F1 0.62, Medium 0.34, High 0.62.
+Misclassifications are almost all between adjacent classes, consistent
+with an ordinal target. Feature importances are dominated by lagged mood
+and circumplex (affect) variables; app-usage features are secondary.
+
+## Repo map
+
+- `Task1A.ipynb` / `Task1B.ipynb` / `Task1C.ipynb` — EDA, cleaning,
+  feature engineering
+- `ML_Model_final.ipynb` — XGBoost / Random Forest classification
+- `dl_model_lstm_FINAL.ipynb` — LSTM temporal classification
+- `Report.pdf` — full write-up (16 pp.): methods, hyperparameter grids,
+  association-rule mining extension, regression on the continuous
+  target, and metric analysis
+- `dataset_mood_smartphone.csv` — raw long-format data;
+  `processed_data.csv`, `ML_Dataset.csv`, `DL_Dataset.csv` —
+  intermediate artifacts
+
+## Running it
+
 ```bash
-git clone https://github.com/yourusername/DataMining-MentalHealthApp.git
-cd DataMining-MentalHealthApp
-pip install -r requirements.txt
+pip install pandas numpy scikit-learn xgboost tensorflow matplotlib seaborn
 ```
 
-## Usage
-1. Open the desired notebook in Jupyter
-2. Run the cells in order to execute the analysis or model training
-3. Review the visualizations and results
-
-
+Open the notebooks in Jupyter and run in order: Task1A → Task1B →
+Task1C → either model notebook. Intermediate CSVs are committed, so the
+model notebooks also run standalone.
